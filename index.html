@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Álbum interactivo de matemáticas. Desbloquea láminas resolviendo retos y aprende sobre números mixtos, enteros y fracciones." />
+  <meta name="theme-color" content="#070b18" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>" />
+  <title>Álbum Matemático: Amigos de las Matemáticas</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <div
+    id="loadingScreen"
+    role="status"
+    aria-live="polite"
+    aria-busy="true"
+    style="
+      position:fixed;
+      inset:0;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      background:#0b0f1f;
+      color:white;
+      z-index:9999;
+      text-align:center;
+    "
+  >
+    <div style="font-size:42px; margin-bottom:10px;">📘</div>
+
+    <div style="font-size:20px; font-weight:bold;">
+      Amigos de las Matemáticas
+    </div>
+
+    <div style="margin-top:8px; color:#a9b7de;">
+      Recuperando tu progreso...
+    </div>
+
+    <div style="margin-top:18px; font-size:12px; opacity:0.6;">
+      Preparando tus láminas
+    </div>
+  </div>
+
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+
+  <!-- LOGIN -->
+  <section id="loginScreen" class="screen screen--active">
+    <div class="shell shell--center">
+      <div class="hero-card">
+        <div class="badge">AMIGOS DE LAS MATEMÁTICAS</div>
+
+        <h1>Amigos de las Matemáticas</h1>
+
+        <div style="font-size:50px; margin-bottom:10px;">🧠</div>
+
+        <p class="subtitle">
+          Explora, desbloquea y demuestra lo que sabes en este álbum interactivo.
+          Ingresa tu usuario y comienza tu aventura.
+        </p>
+
+        <div class="field">
+          <label for="usernameInput">Usuario</label>
+          <input id="usernameInput" type="text" placeholder="Ej: 99B-10-LUCHODIAZ" autocomplete="off" />
+        </div>
+
+        <button id="enterBtn" class="btn btn--primary">🚀 Comenzar aventura</button>
+        <p id="loginFeedback" class="feedback"></p>
+        <p class="help">
+          Tu progreso queda guardado. Continúa tu aventura cuando quieras.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ALBUM -->
+  <section id="albumScreen" class="screen">
+    <header class="topbar shell">
+      <div>
+        <div class="brand">🎴 Amigos de las Matemáticas</div>
+        <div id="studentLine" class="student-line"></div>
+      </div>
+      <div class="topbar__actions">
+        <button id="backBtn" class="btn btn--ghost">Salir</button>
+      </div>
+    </header>
+
+    <main class="shell layout">
+      <aside class="panel">
+        <h2>Desbloqueo</h2>
+        <p class="panel-copy">
+          Ingresa un código para desbloquear exactamente una lámina de la página actual.
+          Si el código ya fue usado o no corresponde, sonará error y verás retroalimentación.
+        </p>
+
+        <div class="field">
+          <label for="codeInput">Código</label>
+          <input id="codeInput" type="text" placeholder="Ej: MIX-A7K-101" autocomplete="off" />
+        </div>
+
+        <button id="useCodeBtn" class="btn btn--primary">Validar código</button>
+
+        <div class="divider"></div>
+
+        <div class="nav-box">
+          <div class="nav-title">Páginas del álbum</div>
+          <div id="pageTabs" class="page-tabs"></div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="progress-card">
+          <div class="progress-title">Progreso de la página</div>
+          <div class="progress-bar"><span id="progressFill"></span></div>
+          <div id="progressText" class="progress-text">0 / 6 láminas</div>
+        </div>
+
+        <div id="feedback" class="feedback feedback--box"></div>
+
+        <div id="completeBox" class="status-box hidden">
+          <div class="status-box__title">🏆 ¡Página completada!</div>
+          <p>
+            Ve donde tu profe, sustenta lo aprendido y luego valida esta página.
+          </p>
+          <button id="teacherValidateBtn" class="btn btn--secondary">Validar con docente</button>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="stats-card">
+          <div class="stats-title">📊 Tu progreso global</div>
+          <div id="statsContent" class="stats-content"></div>
+        </div>
+
+        <div id="validatedBox" class="status-box hidden">
+          <div class="status-box__title">✅ Página evaluada</div>
+          <p id="validatedText"></p>
+        </div>
+      </aside>
+
+      <section class="album-section">
+        <div class="section-head">
+          <div>
+            <h2 id="pageTitle">Página</h2>
+            <p id="pageMeta" class="page-meta"></p>
+          </div>
+          <div class="section-head__pill">6 láminas</div>
+        </div>
+
+        <div id="albumGrid" class="album-grid"></div>
+      </section>
+    </main>
+  </section>
+
+  <!-- MODAL VALIDACIÓN -->
+  <div id="teacherModal" class="modal hidden" role="dialog" aria-labelledby="teacherModalTitle" aria-modal="true">
+    <div class="modal-card">
+      <h3 id="teacherModalTitle">Validación docente</h3>
+      <p>Ingresa el código de validación de esta página para marcarla como evaluada.</p>
+
+      <div class="field">
+        <label for="teacherCodeInput">Código de validación</label>
+        <input id="teacherCodeInput" type="text" placeholder="Ej: VAL-MIX-01" autocomplete="off" />
+      </div>
+
+      <div class="modal-actions">
+        <button id="confirmTeacherBtn" class="btn btn--primary" type="button">Confirmar</button>
+        <button id="closeTeacherBtn" class="btn btn--ghost" type="button">Cancelar</button>
+      </div>
+
+      <p id="teacherFeedback" class="feedback"></p>
+    </div>
+  </div>
+
+  <!-- ADMIN PANEL -->
+  <section id="adminScreen" class="screen">
+    <header class="topbar shell">
+      <div>
+        <div class="brand">⚙️ Panel de Administración</div>
+        <div class="student-line">Gestión del álbum matemático</div>
+      </div>
+      <div class="topbar__actions">
+        <button id="adminBackBtn" class="btn btn--ghost">Volver</button>
+      </div>
+    </header>
+
+    <main class="shell layout">
+      <aside class="panel">
+        <h2>Acciones del Docente</h2>
+        <p class="panel-copy">
+          Desde aquí puedes gestionar los estudiantes, generar códigos y ver estadísticas globales.
+        </p>
+
+        <div class="admin-actions">
+          <button id="viewAllStudentsBtn" class="btn btn--primary">👥 Ver Todos los Estudiantes</button>
+          <button id="generateCodesBtn" class="btn btn--primary">🔢 Generar Códigos</button>
+          <button id="viewStatsBtn" class="btn btn--primary">📊 Estadísticas Globales</button>
+          <button id="resetStudentBtn" class="btn btn--danger">🔄 Resetear Estudiante</button>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="field">
+          <label for="adminSearchInput">Buscar estudiante</label>
+          <input id="adminSearchInput" type="text" placeholder="Escribe nombre o usuario..." autocomplete="off" />
+        </div>
+        <div id="adminSearchResults" class="admin-search-results"></div>
+      </aside>
+
+      <section class="album-section">
+        <div class="section-head">
+          <div>
+            <h2 id="adminTitle">Panel de Administración</h2>
+            <p id="adminMeta" class="page-meta">Selecciona una acción del panel lateral</p>
+          </div>
+        </div>
+
+        <div id="adminContent" class="admin-content">
+          <div class="admin-welcome">
+            <div style="font-size:64px; margin-bottom:16px;">🎓</div>
+            <h3>Bienvenido al Panel de Admin</h3>
+            <p>Selecciona una opción para comenzar a gestionar el álbum.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </section>
+
+  <!-- TOAST DE LOGROS -->
+  <div id="achievementToast" class="toast hidden" role="status" aria-live="polite">
+    <div class="toast-icon"></div>
+    <div class="toast-content">
+      <div class="toast-title"></div>
+      <div class="toast-description"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
