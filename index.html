@@ -6,8 +6,11 @@
   <meta name="description" content="Álbum interactivo de matemáticas. Desbloquea láminas resolviendo retos y aprende sobre números mixtos, enteros y fracciones." />
   <meta name="theme-color" content="#070b18" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>" />
-  <title>Álbum Matemático: Amigos de las Matemáticas</title>
-  <link rel="stylesheet" href="styles.css" />
+  <title>Álbum Matemático Universal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400;1,600&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css?v=20260624-7" />
 </head>
 <body>
 
@@ -92,13 +95,13 @@
       <aside class="panel">
         <h2>Desbloqueo</h2>
         <p class="panel-copy">
-          Ingresa un código para desbloquear exactamente una lámina de la página actual.
-          Si el código ya fue usado o no corresponde, sonará error y verás retroalimentación.
+          Ingresa un código para desbloquear una lámina. Cada código sirve para esa lámina en particular
+          y puede usarlo cualquier estudiante. Si la lámina ya está desbloqueada o el código no corresponde, verás un aviso.
         </p>
 
         <div class="field">
           <label for="codeInput">Código</label>
-          <input id="codeInput" type="text" placeholder="Ej: MIX-A7K-101" autocomplete="off" />
+          <input id="codeInput" type="text" placeholder="Ej: UNI-T5M8-W4B" autocomplete="off" />
         </div>
 
         <button id="useCodeBtn" class="btn btn--primary">Validar código</button>
@@ -130,9 +133,36 @@
 
         <div class="divider"></div>
 
-        <div class="stats-card">
-          <div class="stats-title">📊 Tu progreso global</div>
-          <div id="statsContent" class="stats-content"></div>
+        <div class="sidebar-progress">
+          <div class="sidebar-block">
+            <div class="sidebar-block__title">📊 Tu progreso global</div>
+            <div id="statsContent" class="stats-content"></div>
+          </div>
+
+          <div class="sidebar-block">
+            <div class="sidebar-block__title">🏅 Insignias</div>
+            <div id="badgesSummary" class="sidebar-block__meta">0 / 10 obtenidas</div>
+            <button id="openBadgesModalBtn" type="button" class="btn btn--ghost btn--compact">Ver colección</button>
+          </div>
+
+          <div class="sidebar-block">
+            <div class="sidebar-block__title">⭐ Nivel actual</div>
+            <div id="levelSummary" class="sidebar-block__highlight">Explorador en formación</div>
+            <button id="openLevelsModalBtn" type="button" class="btn btn--ghost btn--compact">Ver niveles</button>
+          </div>
+
+          <div class="sidebar-block">
+            <div class="sidebar-block__title">🎖️ Logros</div>
+            <div id="achievementsSummary" class="sidebar-block__meta">0 / 30</div>
+            <button id="openAchievementsModalBtn" type="button" class="btn btn--ghost btn--compact">Ver logros</button>
+          </div>
+
+          <div class="sidebar-block sidebar-block--history">
+            <div class="sidebar-block__title">📜 Historial</div>
+            <div id="historyContent" class="history-list history-list--compact"></div>
+          </div>
+
+          <button id="exportProgressBtn" type="button" class="btn btn--ghost btn--compact sidebar-export">📤 Exportar progreso</button>
         </div>
 
         <div id="validatedBox" class="status-box hidden">
@@ -142,18 +172,101 @@
       </aside>
 
       <section class="album-section">
+        <header class="section-intro">
+          <div id="sectionRoman" class="section-roman">SECCIÓN</div>
+          <h2 id="sectionTitle" class="section-title">Sección</h2>
+          <p id="sectionDescription" class="section-description"></p>
+        </header>
+
         <div class="section-head">
-          <div>
-            <h2 id="pageTitle">Página</h2>
+          <div class="section-head__page">
+            <div id="pageNumber" class="page-number">Página</div>
+            <h3 id="pageName" class="page-name">Nombre de la página</h3>
             <p id="pageMeta" class="page-meta"></p>
           </div>
           <div class="section-head__pill">6 láminas</div>
         </div>
 
         <div id="albumGrid" class="album-grid"></div>
+
+        <div id="pageReflectionWrap" class="page-reflection-wrap"></div>
+
+        <div id="sectionBadgePreview" class="section-reward-wrap hidden"></div>
       </section>
     </main>
   </section>
+
+  <!-- MODAL RECOMPENSAS -->
+  <div id="rewardModal" class="modal hidden reward-modal" role="dialog" aria-labelledby="rewardModalTitle" aria-modal="true" aria-hidden="true">
+    <div class="modal-card reward-modal__card">
+      <div id="rewardModalIcon" class="reward-modal__icon">🏅</div>
+      <h3 id="rewardModalTitle">INSIGNIA OBTENIDA</h3>
+      <p id="rewardModalMessage"></p>
+      <div class="modal-actions">
+        <button id="closeRewardBtn" class="btn btn--primary" type="button">¡Genial!</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL INSIGNIAS -->
+  <div id="badgesModal" class="modal hidden collection-modal" role="dialog" aria-labelledby="badgesModalTitle" aria-modal="true" aria-hidden="true">
+    <div class="modal-card modal-card--wide collection-modal__card">
+      <div id="badgesCollectionView">
+        <h3 id="badgesModalTitle" class="collection-modal__title">🏅 SALA DE INSIGNIAS</h3>
+        <p id="badgesModalProgress" class="collection-modal__subtitle">Progreso: 0 / 10</p>
+        <div id="badgesModalGrid" class="collection-grid"></div>
+        <div class="modal-actions">
+          <button id="closeBadgesModalBtn" type="button" class="btn btn--primary">Cerrar</button>
+        </div>
+      </div>
+      <div id="badgeDetailView" class="hidden">
+        <h3 id="badgeDetailTitle" class="collection-modal__title">🏅 INSIGNIA</h3>
+        <div id="badgeDetailMedia" class="collection-detail__media"></div>
+        <div id="badgeDetailBody" class="collection-detail__body"></div>
+        <div class="modal-actions">
+          <button id="backToBadgesBtn" type="button" class="btn btn--ghost">← Volver</button>
+          <button id="closeBadgeDetailBtn" type="button" class="btn btn--primary">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL NIVELES -->
+  <div id="levelsModal" class="modal hidden collection-modal" role="dialog" aria-labelledby="levelsModalTitle" aria-modal="true" aria-hidden="true">
+    <div class="modal-card collection-modal__card">
+      <h3 id="levelsModalTitle" class="collection-modal__title">⭐ CAMINO DEL MATEMÁTICO</h3>
+      <div id="levelsModalList" class="collection-list"></div>
+      <div class="collection-progress">
+        <div class="progress-bar"><span id="levelsModalBar"></span></div>
+        <div id="levelsModalMeta" class="collection-modal__subtitle">Nivel 0 de 6</div>
+      </div>
+      <div class="modal-actions">
+        <button id="closeLevelsModalBtn" type="button" class="btn btn--primary">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL LOGROS -->
+  <div id="achievementsModal" class="modal hidden collection-modal" role="dialog" aria-labelledby="achievementsModalTitle" aria-modal="true" aria-hidden="true">
+    <div class="modal-card modal-card--wide collection-modal__card">
+      <h3 id="achievementsModalTitle" class="collection-modal__title">🎖️ LOGROS</h3>
+      <p id="achievementsModalProgress" class="collection-modal__subtitle">0 / 30 desbloqueados</p>
+      <div id="achievementsModalList" class="collection-list collection-list--achievements"></div>
+      <div class="modal-actions">
+        <button id="closeAchievementsModalBtn" type="button" class="btn btn--primary">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL LÁMINA AMPLIADA -->
+  <div id="laminaModal" class="modal hidden lamina-modal" role="dialog" aria-labelledby="laminaModalTitle" aria-modal="true" aria-hidden="true">
+    <div class="modal-card modal-card--wide lamina-modal__card">
+      <div id="laminaModalBody" class="lamina-modal__body"></div>
+      <div class="modal-actions">
+        <button id="closeLaminaModalBtn" type="button" class="btn btn--primary">Cerrar</button>
+      </div>
+    </div>
+  </div>
 
   <!-- MODAL VALIDACIÓN -->
   <div id="teacherModal" class="modal hidden" role="dialog" aria-labelledby="teacherModalTitle" aria-modal="true">
@@ -163,7 +276,7 @@
 
       <div class="field">
         <label for="teacherCodeInput">Código de validación</label>
-        <input id="teacherCodeInput" type="text" placeholder="Ej: VAL-MIX-01" autocomplete="off" />
+        <input id="teacherCodeInput" type="text" placeholder="Ej: VAL-UNI-99" autocomplete="off" />
       </div>
 
       <div class="modal-actions">

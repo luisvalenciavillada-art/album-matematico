@@ -7,9 +7,39 @@
 // C unlockedByPageJSON
 // D usedCodesByPageJSON
 // E validatedByPageJSON
-// F updatedAt
+// F unlockedAtJSON
+// G reflectionByPageJSON (antes notesByPageJSON)
+// H achievementsJSON
+// I updatedAt
+// J insigniasJSON
+// K celebrationsJSON
 
 const SHEET_NAME = "Progress";
+const CODES_SHEET_NAME = "Codes";
+const HEADERS = [
+  "username",
+  "fullName",
+  "unlockedByPageJSON",
+  "usedCodesByPageJSON",
+  "validatedByPageJSON",
+  "unlockedAtJSON",
+  "reflectionByPageJSON",
+  "achievementsJSON",
+  "updatedAt",
+  "insigniasJSON",
+  "celebrationsJSON"
+];
+const CODE_HEADERS = [
+  "code",
+  "pageKey",
+  "cardIndex",
+  "type",
+  "active",
+  "usedBy",
+  "usedAt",
+  "createdAt",
+  "note"
+];
 
 function doGet(e) {
   const action = (e.parameter.action || "").toLowerCase();
@@ -17,7 +47,7 @@ function doGet(e) {
     return handleLoad_(e.parameter.username);
   }
   if (action === "loadall") {
-    return handleLoadAll_();
+    return handleLoadAll_(e.parameter.adminCode);
   }
   return json_({ ok: true, message: "Álbum Matemático API" });
 }
@@ -28,6 +58,18 @@ function doPost(e) {
 
   if (action === "save") {
     return handleSave_(data);
+  }
+  if (action === "admincheck") {
+    return json_({ ok: isAdminCodeValid_(data.adminCode) });
+  }
+  if (action === "reset") {
+    return handleReset_(data);
+  }
+  if (action === "validatecode") {
+    return handleValidateCode_(data);
+  }
+  if (action === "generatecodes") {
+    return handleGenerateCodes_(data);
   }
 
   return json_({ ok: false, message: "Acción no soportada" });
@@ -47,7 +89,12 @@ function handleLoad_(username) {
         state: {
           unlockedByPage: safeParseJson_(values[i][2], {}),
           usedCodesByPage: safeParseJson_(values[i][3], {}),
-          validatedByPage: safeParseJson_(values[i][4], {})
+          validatedByPage: safeParseJson_(values[i][4], {}),
+          unlockedAt: safeParseJson_(values[i][5], {}),
+          reflectionByPage: safeParseJson_(values[i][6], {}),
+          achievements: safeParseJson_(values[i][7], {}),
+          insignias: safeParseJson_(values[i][9], {}),
+          celebrations: safeParseJson_(values[i][10], {})
         }
       });
     }
@@ -58,12 +105,21 @@ function handleLoad_(username) {
     state: {
       unlockedByPage: {},
       usedCodesByPage: {},
-      validatedByPage: {}
+      validatedByPage: {},
+      unlockedAt: {},
+      reflectionByPage: {},
+      achievements: {},
+      insignias: {},
+      celebrations: {}
     }
   });
 }
 
-function handleLoadAll_() {
+function handleLoadAll_(adminCode) {
+  if (!isAdminCodeValid_(adminCode)) {
+    return json_({ ok: false, message: "Codigo de administrador incorrecto" });
+  }
+
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = getSheet_(ss);
   const values = sheet.getDataRange().getValues();
@@ -79,7 +135,12 @@ function handleLoadAll_() {
         unlockedByPage: safeParseJson_(values[i][2], {}),
         usedCodesByPage: safeParseJson_(values[i][3], {}),
         validatedByPage: safeParseJson_(values[i][4], {}),
-        updatedAt: String(values[i][5] || "")
+        unlockedAt: safeParseJson_(values[i][5], {}),
+        reflectionByPage: safeParseJson_(values[i][6], {}),
+        achievements: safeParseJson_(values[i][7], {}),
+        insignias: safeParseJson_(values[i][9], {}),
+        celebrations: safeParseJson_(values[i][10], {}),
+        updatedAt: String(values[i][8] || "")
       };
     }
   }
@@ -101,7 +162,12 @@ function handleSave_(data) {
     JSON.stringify(data.unlockedByPage || {}),
     JSON.stringify(data.usedCodesByPage || {}),
     JSON.stringify(data.validatedByPage || {}),
-    new Date()
+    JSON.stringify(data.unlockedAt || {}),
+    JSON.stringify(data.reflectionByPage || {}),
+    JSON.stringify(data.achievements || {}),
+    new Date(),
+    JSON.stringify(data.insignias || {}),
+    JSON.stringify(data.celebrations || {})
   ];
 
   let existingRow = -1;
@@ -121,6 +187,138 @@ function handleSave_(data) {
   return json_({ ok: true, message: "Guardado" });
 }
 
+function handleReset_(data) {
+  if (!isAdminCodeValid_(data.adminCode)) {
+    return json_({ ok: false, message: "Codigo de administrador incorrecto" });
+  }
+  if (!data.username) return json_({ ok: false, message: "Falta username" });
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = getSheet_(ss);
+  const values = sheet.getDataRange().getValues();
+  const username = String(data.username).trim().toUpperCase();
+
+  // 1. Eliminar fila en hoja Progress
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][0]).trim().toUpperCase() === username) {
+      sheet.deleteRow(i + 1);
+      break;
+    }
+  }
+
+  // 2. Limpiar códigos usados en hoja Codes
+  const codesSheet = getCodesSheet_(ss);
+  const codeValues = codesSheet.getDataRange().getValues();
+  const headers = codeValues[0];
+  const usedByCol = headers.indexOf("usedBy");
+  const usedAtCol = headers.indexOf("usedAt");
+  
+  if (usedByCol !== -1 && usedAtCol !== -1) {
+    // Buscar y limpiar códigos usados por este estudiante
+    for (let i = 1; i < codeValues.length; i++) {
+      if (String(codeValues[i][usedByCol] || "").trim().toUpperCase() === username) {
+        // Limpiar las columnas usedBy y usedAt (dejar código activo de nuevo)
+        codesSheet.getRange(i + 1, usedByCol + 1).setValue("");
+        codesSheet.getRange(i + 1, usedAtCol + 1).setValue("");
+      }
+    }
+  }
+
+  return json_({ ok: true, message: "Progreso y códigos eliminados" });
+}
+
+function handleValidateCode_(data) {
+  const username = String(data.username || "").trim().toUpperCase();
+  const code = String(data.code || "").trim().toUpperCase();
+  const requestedType = String(data.type || "unlock").trim().toLowerCase();
+  const requestedPageKey = String(data.pageKey || "").trim();
+
+  if (!username) return json_({ ok: false, message: "Falta username" });
+  if (!code) return json_({ ok: false, message: "Falta codigo" });
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = getCodesSheet_(ss);
+  const values = sheet.getDataRange().getValues();
+
+  for (let i = 1; i < values.length; i++) {
+    const rowCode = String(values[i][0] || "").trim().toUpperCase();
+    const pageKey = String(values[i][1] || "").trim();
+    const cardIndex = values[i][2] === "" ? "" : Number(values[i][2]);
+    const type = String(values[i][3] || "unlock").trim().toLowerCase();
+    const active = String(values[i][4]).toLowerCase() !== "false";
+    const usedBy = String(values[i][5] || "").trim();
+
+    if (rowCode !== code) continue;
+    if (type !== requestedType) return json_({ ok: false, message: "El codigo no corresponde a esta accion" });
+    if (!active) return json_({ ok: false, message: "El codigo esta inactivo" });
+    if (requestedPageKey && pageKey && pageKey !== requestedPageKey) {
+      return json_({ ok: false, message: "El codigo no corresponde a esta pagina" });
+    }
+
+    if (type === "teacher") {
+      if (usedBy) return json_({ ok: false, message: "Este codigo ya fue utilizado" });
+      sheet.getRange(i + 1, 6, 1, 2).setValues([[username, new Date()]]);
+    }
+
+    return json_({
+      ok: true,
+      type: type,
+      code: code,
+      pageKey: pageKey,
+      cardIndex: cardIndex,
+      message: type === "teacher" ? "Pagina validada" : "Lamina desbloqueada"
+    });
+  }
+
+  return json_({ ok: false, message: "Codigo incorrecto" });
+}
+
+function handleGenerateCodes_(data) {
+  if (!isAdminCodeValid_(data.adminCode)) {
+    return json_({ ok: false, message: "Codigo de administrador incorrecto" });
+  }
+
+  const pageKey = String(data.pageKey || "").trim();
+  const cardIndex = Number(data.cardIndex);
+  const type = String(data.type || "unlock").trim().toLowerCase();
+  const quantity = Math.min(Math.max(Number(data.quantity || 5), 1), 100);
+
+  if (!pageKey) return json_({ ok: false, message: "Falta pageKey" });
+  if (type === "unlock" && !Number.isFinite(cardIndex)) {
+    return json_({ ok: false, message: "Falta cardIndex" });
+  }
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = getCodesSheet_(ss);
+  const existing = getExistingCodes_(sheet);
+  const codes = [];
+  const prefix = pageKey.substring(0, 3).toUpperCase();
+
+  while (codes.length < quantity) {
+    const code = `${type === "teacher" ? "VAL" : prefix}-${randomChunk_(4)}-${randomChunk_(3)}`;
+    if (existing[code]) continue;
+    existing[code] = true;
+    codes.push(code);
+  }
+
+  const rows = codes.map(function(code) {
+    return [
+      code,
+      pageKey,
+      type === "teacher" ? "" : cardIndex,
+      type,
+      true,
+      "",
+      "",
+      new Date(),
+      ""
+    ];
+  });
+  sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, CODE_HEADERS.length).setValues(rows);
+
+  return json_({ ok: true, codes: codes });
+}
+
 function getSheet_(ss) {
   let sheet = ss.getSheetByName(SHEET_NAME);
   if (!sheet) {
@@ -128,30 +326,71 @@ function getSheet_(ss) {
   }
 
   if (sheet.getLastRow() === 0) {
-    sheet.appendRow([
-      "username",
-      "fullName",
-      "unlockedByPageJSON",
-      "usedCodesByPageJSON",
-      "validatedByPageJSON",
-      "updatedAt"
-    ]);
+    sheet.appendRow(HEADERS);
   } else {
-    const headers = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 6)).getValues()[0];
+    const headers = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), HEADERS.length)).getValues()[0];
     if (String(headers[0]).toLowerCase() !== "username") {
       sheet.clear();
-      sheet.appendRow([
-        "username",
-        "fullName",
-        "unlockedByPageJSON",
-        "usedCodesByPageJSON",
-        "validatedByPageJSON",
-        "updatedAt"
-      ]);
+      sheet.appendRow(HEADERS);
+    } else {
+      for (let i = 0; i < HEADERS.length; i++) {
+        if (headers[i] !== HEADERS[i]) {
+          sheet.getRange(1, i + 1).setValue(HEADERS[i]);
+        }
+      }
     }
   }
 
   return sheet;
+}
+
+function getCodesSheet_(ss) {
+  let sheet = ss.getSheetByName(CODES_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(CODES_SHEET_NAME);
+  }
+
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(CODE_HEADERS);
+  } else {
+    const headers = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), CODE_HEADERS.length)).getValues()[0];
+    if (String(headers[0]).toLowerCase() !== "code") {
+      sheet.clear();
+      sheet.appendRow(CODE_HEADERS);
+    } else {
+      for (let i = 0; i < CODE_HEADERS.length; i++) {
+        if (headers[i] !== CODE_HEADERS[i]) {
+          sheet.getRange(1, i + 1).setValue(CODE_HEADERS[i]);
+        }
+      }
+    }
+  }
+
+  return sheet;
+}
+
+function getExistingCodes_(sheet) {
+  const values = sheet.getDataRange().getValues();
+  const existing = {};
+  for (let i = 1; i < values.length; i++) {
+    const code = String(values[i][0] || "").trim().toUpperCase();
+    if (code) existing[code] = true;
+  }
+  return existing;
+}
+
+function randomChunk_(length) {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let out = "";
+  for (let i = 0; i < length; i++) {
+    out += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return out;
+}
+
+function isAdminCodeValid_(adminCode) {
+  const configured = PropertiesService.getScriptProperties().getProperty("ADMIN_CODE") || "ADMIN2024";
+  return String(adminCode || "") === configured;
 }
 
 function safeParseJson_(value, fallback) {

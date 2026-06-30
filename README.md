@@ -20,8 +20,8 @@ Crea una hoja de cálculo de Google y luego una pestaña llamada:
 
 Encabezados en la fila 1:
 
-| username | fullName | unlockedByPageJSON | usedCodesByPageJSON | validatedByPageJSON | updatedAt |
-|---|---|---|---|---|---|
+| username | fullName | unlockedByPageJSON | usedCodesByPageJSON | validatedByPageJSON | unlockedAtJSON | notesByPageJSON | achievementsJSON | updatedAt |
+|---|---|---|---|---|---|---|---|---|
 
 No hace falta crear más columnas.
 
@@ -56,6 +56,26 @@ Esa URL se pega en `app.js` en esta línea:
 ```js
 const API_URL = "PEGA_AQUI_LA_URL_DE_TU_APPS_SCRIPT";
 ```
+
+### Codigo de administrador
+El panel docente valida el codigo desde Apps Script. Por defecto usa `ADMIN2024`.
+Para cambiarlo sin tocar el front-end:
+
+1. En Apps Script abre **Configuracion del proyecto**.
+2. Agrega una propiedad de script llamada `ADMIN_CODE`.
+3. Escribe el codigo nuevo como valor.
+
+### Codigos de laminas en Google Sheets
+El backend crea automaticamente una pestaña llamada `Codes` cuando se genera o valida un codigo.
+Columnas:
+
+| code | pageKey | cardIndex | type | active | usedBy | usedAt | createdAt | note |
+|---|---|---:|---|---|---|---|---|---|
+
+- `type` puede ser `unlock` para laminas o `teacher` para validacion docente.
+- `cardIndex` empieza en `0`: la primera lamina es `0`, la segunda es `1`, y asi sucesivamente.
+- Los codigos `unlock` se marcan con `usedBy` y `usedAt` cuando un estudiante los usa.
+- Los codigos `teacher` se pueden crear manualmente en esa hoja o desde Apps Script si se agrega un generador especifico.
 
 ---
 
